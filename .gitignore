@@ -116,3 +116,4 @@ dmypy.json
 .idea/
 .idea
 Procfile.bak
+images/
