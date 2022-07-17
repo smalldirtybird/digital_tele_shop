@@ -1,5 +1,6 @@
 import argparse
 import os
+import traceback
 import urllib
 from functools import partial
 from textwrap import dedent
@@ -11,7 +12,8 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (CallbackQueryHandler, CommandHandler, Filters,
                           MessageHandler, Updater)
 
-from elastic_path_api import (get_authorization_token, get_product_details,
+from elastic_path_api import (add_product_to_cart, get_authorization_token,
+                              get_cart_items, get_product_details,
                               get_product_image_link, get_products)
 
 _database = None
@@ -88,15 +90,35 @@ def handle_menu(bot, update, image_folder_path):
     download_image(product_image_link, image_filepath)
     chat_id = update['callback_query']['message']['chat']['id']
     message_id = update['callback_query']['message']['message_id']
-    reply_markup = InlineKeyboardMarkup(
-        [[InlineKeyboardButton('Back', callback_data='go_to_menu')]])
+    items_quantities = [1, 5, 10]
+    keyboard = []
+    for quantity in items_quantities:
+        button_name = f'Buy {quantity}'
+        callback_data = f'{product_id}, {quantity}'
+        keyboard.append(
+            [
+                InlineKeyboardButton(
+                    button_name,
+                    callback_data=callback_data,
+                )
+            ]
+        )
+    keyboard.append(
+        [
+            InlineKeyboardButton(
+                'Back',
+                callback_data='menu_return',
+            )
+        ]
+    )
+    reply_markup = InlineKeyboardMarkup(keyboard)
     bot.delete_message(
         chat_id=chat_id,
         message_id=message_id,
     )
     message = dedent(f'''
         {product_name}\n
-        {product_price} for one piece\n
+        {product_price} per one piece\n
         {product_stock} pieces available on stock\n
         {product_description}''')
     with open(image_filepath, 'rb') as image_file:
@@ -112,14 +134,25 @@ def handle_menu(bot, update, image_folder_path):
 
 def handle_description(bot, update):
     query = update['callback_query']['data']
-    chat_id = update['callback_query']['message']['chat']['id']
-    if query == 'go_to_menu':
+    chat_id = str(update['callback_query']['message']['chat']['id'])
+    if query == 'menu_return':
         bot.send_message(
             text='Please choose:',
             chat_id=chat_id,
             reply_markup=get_products_menu_keyboard(),
         )
         return 'HANDLE_MENU'
+    else:
+        ep_authorization_token = get_authorization_token()
+        product_id, quantity = query.split(sep=', ')
+        add_product_to_cart(
+                ep_authorization_token,
+                chat_id,
+                product_id,
+                int(quantity),
+            )
+    print(get_cart_items(ep_authorization_token, chat_id))
+    return 'HANDLE_DESCRIPTION'
 
 
 def handle_users_reply(bot, update, image_folder_path):
@@ -153,7 +186,7 @@ def handle_users_reply(bot, update, image_folder_path):
         next_state = state_handler(bot, update)
         db.set(chat_id, next_state)
     except Exception as err:
-        print(err)
+        print(traceback.format_exc(err))
 
 
 def get_database_connection():

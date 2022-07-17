@@ -57,16 +57,16 @@ def get_product_image_link(elastic_path_auth_token, file_id):
     return response.json()['data']['link']['href']
 
 
-def add_product_to_cart(elastic_path_auth_token, cart_name, product_id):
+def add_product_to_cart(elastic_path_auth_token, cart_id, product_id, quantity):
     base_url = 'https://api.moltin.com/'
-    path = os.path.join('v2/carts/', cart_name, 'items/')
+    path = os.path.join('v2/carts/', cart_id, 'items/')
     url = os.path.join(base_url, path)
     headers = {'Authorization': f'Bearer {elastic_path_auth_token}'}
     payload = {
         'data': {
             'type': 'cart_item',
             'id': product_id,
-            'quantity': 1
+            'quantity': quantity
             }
         }
     response = requests.post(url, headers=headers, json=payload)
@@ -74,9 +74,9 @@ def add_product_to_cart(elastic_path_auth_token, cart_name, product_id):
     return response.json()
 
 
-def get_cart_items(elastic_path_auth_token, cart_name):
+def get_cart_items(elastic_path_auth_token, cart_id):
     base_url = 'https://api.moltin.com/'
-    path = os.path.join('v2/carts/', cart_name, 'items/')
+    path = os.path.join('v2/carts/', cart_id, 'items/')
     url = os.path.join(base_url, path)
     headers = {'Authorization': f'Bearer {elastic_path_auth_token}'}
     response = requests.get(url, headers=headers)
