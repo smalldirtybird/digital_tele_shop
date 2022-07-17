@@ -84,18 +84,12 @@ def handle_menu(bot, update, image_folder_path):
         cart_items = get_cart_items(ep_authorization_token, chat_id)
         cart_total_info = []
         for item in cart_items:
-            product_name = item['name']
-            product_description = item['description']
-            product_price =\
-                item['meta']['display_price']['with_tax']['unit']['formatted']
-            quantity_in_cart = item['quantity']
-            total_product_price =\
-                item['meta']['display_price']['with_tax']['value']['formatted']
             product_details_text = dedent(f"""
-            {product_name}
-            {product_description}
-            {product_price}
-            {quantity_in_cart} pieces in cart for {total_product_price}
+            {item['name']}
+            {item['description']}
+            {item['meta']['display_price']['with_tax']['unit']['formatted']}
+            {item['quantity']} pieces in cart for {item['meta']
+            ['display_price']['with_tax']['value']['formatted']}
             """)
             cart_total_info.append(product_details_text)
         cart_info = get_customers_cart(ep_authorization_token, chat_id)
