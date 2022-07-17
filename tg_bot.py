@@ -17,18 +17,24 @@ from elastic_path_api import (get_authorization_token, get_product_details,
 _database = None
 
 
-def start(bot, update):
+def get_products_menu_keyboard():
     ep_authorization_token = get_authorization_token()
     products = get_products(ep_authorization_token)
     keyboard = []
-    for number,  product in enumerate(products):
+    for number, product in enumerate(products):
         product_name = product['name']
         product_id = product['id']
         product_button = [InlineKeyboardButton(
             product_name, callback_data=product_id)]
         keyboard.append(product_button)
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text('Please choose:', reply_markup=reply_markup)
+    return InlineKeyboardMarkup(keyboard)
+
+
+def start(bot, update):
+    update.message.reply_text(
+        'Please choose:',
+        reply_markup=get_products_menu_keyboard(),
+    )
     return 'HANDLE_MENU'
 
 
@@ -101,7 +107,19 @@ def handle_menu(bot, update, image_folder_path):
             reply_markup=reply_markup,
         )
     os.remove(image_filepath)
-    return 'START'
+    return 'HANDLE_DESCRIPTION'
+
+
+def handle_description(bot, update):
+    query = update['callback_query']['data']
+    chat_id = update['callback_query']['message']['chat']['id']
+    if query == 'go_to_menu':
+        bot.send_message(
+            text='Please choose:',
+            chat_id=chat_id,
+            reply_markup=get_products_menu_keyboard(),
+        )
+        return 'HANDLE_MENU'
 
 
 def handle_users_reply(bot, update, image_folder_path):
@@ -121,7 +139,11 @@ def handle_users_reply(bot, update, image_folder_path):
     states_functions = {
         'START': start,
         'ECHO': echo,
-        'HANDLE_MENU': partial(handle_menu, image_folder_path=image_folder_path)
+        'HANDLE_MENU': partial(
+            handle_menu,
+            image_folder_path=image_folder_path,
+        ),
+        'HANDLE_DESCRIPTION': handle_description,
     }
     state_handler = states_functions[user_state]
     # Если вы вдруг не заметите, что python-telegram-bot перехватывает ошибки.
@@ -165,7 +187,10 @@ def main():
     token = os.environ['TELEGRAM_BOT_TOKEN']
     updater = Updater(token)
     dispatcher = updater.dispatcher
-    handling_users_reply = partial(handle_users_reply, image_folder_path=image_folder)
+    handling_users_reply = partial(
+        handle_users_reply,
+        image_folder_path=image_folder,
+    )
     dispatcher.add_handler(CallbackQueryHandler(handling_users_reply))
     dispatcher.add_handler(MessageHandler(Filters.text, handling_users_reply))
     dispatcher.add_handler(CommandHandler('start', handling_users_reply))
