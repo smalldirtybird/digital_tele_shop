@@ -97,7 +97,7 @@ def handle_menu(bot, update, image_folder_path):
     return 'START'
 
 
-def handle_users_reply(bot, update):
+def handle_users_reply(bot, update, image_folder_path):
     db = get_database_connection()
     if update.message:
         user_reply = update.message.text
@@ -114,7 +114,7 @@ def handle_users_reply(bot, update):
     states_functions = {
         'START': start,
         'ECHO': echo,
-        'HANDLE_MENU': handle_menu
+        'HANDLE_MENU': partial(handle_menu, image_folder_path=image_folder_path)
     }
     state_handler = states_functions[user_state]
     # Если вы вдруг не заметите, что python-telegram-bot перехватывает ошибки.
@@ -158,10 +158,10 @@ def main():
     token = os.environ['TELEGRAM_BOT_TOKEN']
     updater = Updater(token)
     dispatcher = updater.dispatcher
-    handling_menu = partial(handle_menu, image_folder_path=image_folder)
-    dispatcher.add_handler(CallbackQueryHandler(handling_menu))
-    dispatcher.add_handler(MessageHandler(Filters.text, handle_users_reply))
-    dispatcher.add_handler(CommandHandler('start', handle_users_reply))
+    handling_users_reply = partial(handle_users_reply, image_folder_path=image_folder)
+    dispatcher.add_handler(CallbackQueryHandler(handling_users_reply))
+    dispatcher.add_handler(MessageHandler(Filters.text, handling_users_reply))
+    dispatcher.add_handler(CommandHandler('start', handling_users_reply))
     updater.start_polling()
 
 
