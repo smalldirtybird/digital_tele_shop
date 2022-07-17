@@ -82,6 +82,8 @@ def handle_menu(bot, update, image_folder_path):
     download_image(product_image_link, image_filepath)
     chat_id = update['callback_query']['message']['chat']['id']
     message_id = update['callback_query']['message']['message_id']
+    reply_markup = InlineKeyboardMarkup(
+        [[InlineKeyboardButton('Back', callback_data='go_to_menu')]])
     bot.delete_message(
         chat_id=chat_id,
         message_id=message_id,
@@ -92,7 +94,12 @@ def handle_menu(bot, update, image_folder_path):
         {product_stock} pieces available on stock\n
         {product_description}''')
     with open(image_filepath, 'rb') as image_file:
-        bot.send_photo(chat_id, image_file, caption=message)
+        bot.send_photo(
+            chat_id,
+            image_file,
+            caption=message,
+            reply_markup=reply_markup,
+        )
     os.remove(image_filepath)
     return 'START'
 
