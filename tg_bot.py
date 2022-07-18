@@ -23,13 +23,10 @@ def get_main_menu_keyboard(chat_id):
     for number, product in enumerate(products):
         product_name = product['name']
         product_id = product['id']
-        product_button = [InlineKeyboardButton(
-            product_name, callback_data=product_id)]
-        keyboard.append(product_button)
+        keyboard.append([InlineKeyboardButton(
+            product_name, callback_data=product_id)])
     keyboard.append([InlineKeyboardButton(
-        'View shopping cart',
-        callback_data='display_cart_details',
-    )])
+        'View shopping cart', callback_data='display_cart_details')])
     return InlineKeyboardMarkup(keyboard)
 
 
@@ -42,20 +39,6 @@ def start(bot, update):
     return 'HANDLE_MENU'
 
 
-def button(bot, update):
-    query = update.callback_query
-
-    bot.edit_message_text(text="Product id: {}".format(query.data),
-                          chat_id=query.message.chat_id,
-                          message_id=query.message.message_id)
-
-
-def echo(bot, update):
-    users_reply = update.message.text
-    update.message.reply_text(users_reply)
-    return 'ECHO'
-
-
 def download_image(url, path, params=None):
     response = requests.get(url, params=params)
     response.raise_for_status()
@@ -64,9 +47,16 @@ def download_image(url, path, params=None):
 
 
 def get_image_extension(url):
-    parsed_url = urllib.parse.urlsplit(url, scheme='', allow_fragments=True)
-    filepath = urllib.parse.unquote(parsed_url[2],
-                                    encoding='utf-8', errors='replace')
+    parsed_url = urllib.parse.urlsplit(
+        url,
+        scheme='',
+        allow_fragments=True
+    )
+    filepath = urllib.parse.unquote(
+        parsed_url[2],
+        encoding='utf-8',
+        errors='replace',
+    )
     path, extension = os.path.splitext(filepath)
     return extension
 
@@ -77,34 +67,31 @@ def send_cart_to_customer(bot, chat_id, message_id):
     cart_info = ep_api.get_customers_cart(ep_authorization_token, chat_id)
     cart_total_info = []
     keyboard = [[InlineKeyboardButton(
-        'Make a purchase',
-        callback_data='request_email',
-    )]]
+        'Make a purchase', callback_data='request_email')]]
     for item in cart_items:
         product_name = item['name']
+        product_description = item['description']
+        product_price = \
+            item['meta']['display_price']['with_tax']['unit']['formatted']
+        product_quantity = item['quantity']
+        product_total_amount = \
+            item['meta']['display_price']['with_tax']['value']['formatted']
+        product_id = item['id']
         product_details_text = dedent(f"""
                 {product_name}
-                {item['description']}
-                {item['meta']['display_price']['with_tax']['unit']['formatted']}
-                {item['quantity']} pieces in cart for {item['meta']
-        ['display_price']['with_tax']['value']['formatted']}
+                {product_description}
+                {product_price}
+                {product_quantity} pieces in cart for {product_total_amount}
                 """)
         cart_total_info.append(product_details_text)
         keyboard.append([InlineKeyboardButton(
-            f'Remove {product_name} from cart',
-            callback_data=item['id'],
-        )])
+            f'Remove {product_name} from cart', callback_data=product_id)])
     cart_total_amount = \
         cart_info['meta']['display_price']['with_tax']['formatted']
     cart_total_info.append(f'Total: {cart_total_amount}')
-    bot.delete_message(
-        chat_id=chat_id,
-        message_id=message_id,
-    )
+    bot.delete_message(chat_id=chat_id, message_id=message_id)
     keyboard.append([InlineKeyboardButton(
-        'Back to menu',
-        callback_data='menu_return',
-    )])
+        'Back to menu', callback_data='main_menu_return')])
     bot.send_message(
         text='\n'.join(cart_total_info),
         chat_id=chat_id,
@@ -114,45 +101,32 @@ def send_cart_to_customer(bot, chat_id, message_id):
 
 def handle_menu(bot, update, image_folder_path):
     query = update.callback_query
-    ep_authorization_token = ep_api.get_authorization_token()
     chat_id = query['message']['chat']['id']
     message_id = query['message']['message_id']
     if query.data == 'display_cart_details':
         send_cart_to_customer(bot, chat_id, message_id)
         return 'HANDLE_CART'
     else:
+        ep_authorization_token = ep_api.get_authorization_token()
         product_id = query.data
         product_name, product_price, product_stock, product_description, \
             product_image_id = ep_api.get_product_details(
-                ep_authorization_token,
-                product_id,
-            )
+                ep_authorization_token, product_id)
         product_image_link = ep_api.get_product_image_link(
-            ep_authorization_token,
-            product_image_id,
-        )
+            ep_authorization_token, product_image_id)
         image_file_extension = get_image_extension(product_image_link)
         image_filepath = os.path.join(
-            image_folder_path,
-            f'{product_name}{image_file_extension}',
-        )
+            image_folder_path, f'{product_name}{image_file_extension}')
         download_image(product_image_link, image_filepath)
         items_quantities = [1, 5, 10]
         keyboard = []
         for quantity in items_quantities:
             keyboard.append([InlineKeyboardButton(
-                f'Buy {quantity}',
-                callback_data=f'{product_id}, {quantity}',
-            )])
+                f'Buy {quantity}', callback_data=f'{product_id}, {quantity}')])
         keyboard.append([InlineKeyboardButton(
-            'Back to menu',
-            callback_data='menu_return',
-        )])
+            'Back to menu', callback_data='main_menu_return')])
         reply_markup = InlineKeyboardMarkup(keyboard)
-        bot.delete_message(
-            chat_id=chat_id,
-            message_id=message_id,
-        )
+        bot.delete_message(chat_id=chat_id, message_id=message_id)
         message = dedent(f'''
             {product_name}\n
             {product_price} per one piece\n
@@ -171,8 +145,8 @@ def handle_menu(bot, update, image_folder_path):
 
 def handle_description(bot, update):
     query_data = update['callback_query']['data']
-    chat_id = str(update['callback_query']['message']['chat']['id'])
-    if query_data == 'menu_return':
+    chat_id = update['callback_query']['message']['chat']['id']
+    if query_data == 'main_menu_return':
         bot.send_message(
             text='Please choose:',
             chat_id=chat_id,
@@ -186,12 +160,12 @@ def handle_description(bot, update):
                 ep_authorization_token,
                 chat_id,
                 product_id,
-                int(quantity),
+                quantity,
             )
     return 'HANDLE_DESCRIPTION'
 
 
-def waiting_email(bot, update):
+def handle_waiting_email(bot, update):
     user_reply = update['message']['text']
     chat_id = update['message']['chat']['id']
     username = update['message']['chat']['username']
@@ -207,23 +181,23 @@ def waiting_email(bot, update):
                     Email {user_reply} is invalid or already in use.
                     Please, try again.
                     '''),
-            chat_id=chat_id
+            chat_id=chat_id,
         )
         return 'WAITING_EMAIL'
-    if 'data' in customer_account and customer_account['data']['id']:
+    if customer_account['data']['id']:
         bot.send_message(
             text=dedent(f'''
                 Your order is accepted. Please wait for an email:
                 {user_reply}
                 '''),
-            chat_id=chat_id
+            chat_id=chat_id,
         )
         return 'HANDLE MENU'
 
 
 def handle_cart(bot, update):
     query_data = update['callback_query']['data']
-    chat_id = str(update['callback_query']['message']['chat']['id'])
+    chat_id = update['callback_query']['message']['chat']['id']
     message_id = update['callback_query']['message']['message_id']
     if query_data == 'request_email':
         bot.send_message(
@@ -235,11 +209,8 @@ def handle_cart(bot, update):
             chat_id=chat_id,
         )
         return 'WAITING_EMAIL'
-    if query_data == 'menu_return':
-        bot.delete_message(
-            chat_id=chat_id,
-            message_id=message_id,
-        )
+    if query_data == 'main_menu_return':
+        bot.delete_message(chat_id=chat_id, message_id=message_id)
         bot.send_message(
             text='Please choose:',
             chat_id=chat_id,
@@ -273,14 +244,11 @@ def handle_users_reply(bot, update, image_folder_path):
         user_state = db.get(chat_id).decode('utf-8')
     states_functions = {
         'START': start,
-        'ECHO': echo,
         'HANDLE_MENU': partial(
-            handle_menu,
-            image_folder_path=image_folder_path,
-        ),
+            handle_menu, image_folder_path=image_folder_path),
         'HANDLE_DESCRIPTION': handle_description,
         'HANDLE_CART': handle_cart,
-        'WAITING_EMAIL': waiting_email,
+        'WAITING_EMAIL': handle_waiting_email,
     }
     state_handler = states_functions[user_state]
     next_state = state_handler(bot, update)
