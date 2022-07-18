@@ -1,9 +1,11 @@
 import os
+from datetime import datetime
 
 import requests
 
 
 def get_authorization_token():
+    print('now:', datetime.timestamp(datetime.now()))
     base_url = 'https://api.moltin.com/'
     path = 'oauth/access_token/'
     url = os.path.join(base_url, path)
@@ -16,7 +18,8 @@ def get_authorization_token():
     }
     response = requests.post(url, data=payload)
     response.raise_for_status()
-    return response.json()['access_token']
+    token_details = response.json()
+    return token_details['access_token'], token_details['expires']
 
 
 def get_products(elastic_path_auth_token):

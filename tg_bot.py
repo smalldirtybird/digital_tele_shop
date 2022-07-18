@@ -16,8 +16,7 @@ import elastic_path_api as ep_api
 _database = None
 
 
-def get_main_menu_keyboard():
-    ep_authorization_token = ep_api.get_authorization_token()
+def get_main_menu_keyboard(ep_authorization_token):
     products = ep_api.get_products(ep_authorization_token)
     keyboard = []
     for number, product in enumerate(products):
@@ -30,10 +29,10 @@ def get_main_menu_keyboard():
     return InlineKeyboardMarkup(keyboard)
 
 
-def start(bot, update):
+def start(bot, update, ep_authorization_token):
     update.message.reply_text(
         'Please choose:',
-        reply_markup=get_main_menu_keyboard(),
+        reply_markup=get_main_menu_keyboard(ep_authorization_token),
     )
     return 'HANDLE_MENU'
 
@@ -133,11 +132,10 @@ def send_product_to_customer(bot, chat_id, message_id, ep_authorization_token,
     os.remove(image_filepath)
 
 
-def handle_menu(bot, update, image_folder_path):
+def handle_menu(bot, update, image_folder_path, ep_authorization_token):
     query = update.callback_query
     chat_id = query['message']['chat']['id']
     message_id = query['message']['message_id']
-    ep_authorization_token = ep_api.get_authorization_token()
     if query.data == 'display_cart_details':
         send_cart_to_customer(bot, chat_id, message_id, ep_authorization_token)
         return 'HANDLE_CART'
@@ -154,18 +152,17 @@ def handle_menu(bot, update, image_folder_path):
         return 'HANDLE_DESCRIPTION'
 
 
-def handle_description(bot, update):
+def handle_description(bot, update, ep_authorization_token):
     query_data = update['callback_query']['data']
     chat_id = update['callback_query']['message']['chat']['id']
     if query_data == 'main_menu_return':
         bot.send_message(
             text='Please choose:',
             chat_id=chat_id,
-            reply_markup=get_main_menu_keyboard(),
+            reply_markup=get_main_menu_keyboard(ep_authorization_token),
         )
         return 'HANDLE_MENU'
     else:
-        ep_authorization_token = ep_api.get_authorization_token()
         product_id, quantity = query_data.split(sep=', ')
         ep_api.add_product_to_cart(
                 ep_authorization_token,
@@ -176,11 +173,10 @@ def handle_description(bot, update):
     return 'HANDLE_DESCRIPTION'
 
 
-def handle_waiting_email(bot, update):
+def handle_waiting_email(bot, update, ep_authorization_token):
     user_reply = update['message']['text']
     chat_id = update['message']['chat']['id']
     username = update['message']['chat']['username']
-    ep_authorization_token = ep_api.get_authorization_token()
     customer_account = ep_api.create_a_customer(
         ep_authorization_token,
         user_reply,
@@ -206,7 +202,7 @@ def handle_waiting_email(bot, update):
         return 'HANDLE MENU'
 
 
-def handle_cart(bot, update):
+def handle_cart(bot, update, ep_authorization_token):
     query_data = update['callback_query']['data']
     chat_id = update['callback_query']['message']['chat']['id']
     message_id = update['callback_query']['message']['message_id']
@@ -225,11 +221,10 @@ def handle_cart(bot, update):
         bot.send_message(
             text='Please choose:',
             chat_id=chat_id,
-            reply_markup=get_main_menu_keyboard(),
+            reply_markup=get_main_menu_keyboard(ep_authorization_token),
         )
         return 'HANDLE_MENU'
     else:
-        ep_authorization_token = ep_api.get_authorization_token()
         ep_api.delete_item_from_cart(
             ep_authorization_token,
             chat_id,
@@ -240,6 +235,8 @@ def handle_cart(bot, update):
 
 
 def handle_users_reply(bot, update, image_folder_path):
+    ep_auth_token, token_expires = ep_api.get_authorization_token()
+    print(ep_auth_token, token_expires)
     db = get_database_connection()
     if update.message:
         user_reply = update.message.text
@@ -254,12 +251,18 @@ def handle_users_reply(bot, update, image_folder_path):
     else:
         user_state = db.get(chat_id).decode('utf-8')
     states_functions = {
-        'START': start,
+        'START': partial(start, ep_authorization_token=ep_auth_token),
         'HANDLE_MENU': partial(
-            handle_menu, image_folder_path=image_folder_path),
-        'HANDLE_DESCRIPTION': handle_description,
-        'HANDLE_CART': handle_cart,
-        'WAITING_EMAIL': handle_waiting_email,
+            handle_menu,
+            image_folder_path=image_folder_path,
+            ep_authorization_token=ep_auth_token,
+        ),
+        'HANDLE_DESCRIPTION': partial(
+            handle_description, ep_authorization_token=ep_auth_token),
+        'HANDLE_CART': partial(
+            handle_cart, ep_authorization_token=ep_auth_token),
+        'WAITING_EMAIL': partial(
+            handle_waiting_email, ep_authorization_token=ep_auth_token),
     }
     state_handler = states_functions[user_state]
     next_state = state_handler(bot, update)
