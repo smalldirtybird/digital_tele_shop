@@ -1,6 +1,5 @@
 import argparse
 import os
-import traceback
 import urllib
 from functools import partial
 from textwrap import dedent
@@ -193,15 +192,33 @@ def handle_description(bot, update):
 
 
 def waiting_email(bot, update):
-    user_reply = update['message']
-    bot.send_message(
-        text=dedent(f'''
-            Email you sent:
-            {user_reply['text']}
-            '''),
-        chat_id=user_reply['chat']['id']
+    user_reply = update['message']['text']
+    chat_id = update['message']['chat']['id']
+    username = update['message']['chat']['username']
+    ep_authorization_token = ep_api.get_authorization_token()
+    customer_account = ep_api.create_a_customer(
+        ep_authorization_token,
+        user_reply,
+        username,
     )
-    return 'WAITING_EMAIL'
+    if 'errors' in customer_account:
+        bot.send_message(
+            text=dedent(f'''
+                    Email {user_reply} is invalid or already in use.
+                    Please, try again.
+                    '''),
+            chat_id=chat_id
+        )
+        return 'WAITING_EMAIL'
+    if 'data' in customer_account and customer_account['data']['id']:
+        bot.send_message(
+            text=dedent(f'''
+                Your order is accepted. Please wait for an email:
+                {user_reply}
+                '''),
+            chat_id=chat_id
+        )
+        return 'HANDLE MENU'
 
 
 def handle_cart(bot, update):
@@ -266,14 +283,8 @@ def handle_users_reply(bot, update, image_folder_path):
         'WAITING_EMAIL': waiting_email,
     }
     state_handler = states_functions[user_state]
-    # Если вы вдруг не заметите, что python-telegram-bot перехватывает ошибки.
-    # Оставляю этот try...except, чтобы код не падал молча.
-    # Этот фрагмент можно переписать.
-    try:
-        next_state = state_handler(bot, update)
-        db.set(chat_id, next_state)
-    except Exception as err:
-        print(traceback.format_exc(err))
+    next_state = state_handler(bot, update)
+    db.set(chat_id, next_state)
 
 
 def get_database_connection():

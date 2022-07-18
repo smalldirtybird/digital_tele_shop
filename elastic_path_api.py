@@ -1,7 +1,5 @@
 import os
-from pprint import pprint
 
-from dotenv import load_dotenv
 import requests
 
 
@@ -44,7 +42,8 @@ def get_product_details(elastic_path_auth_token, product_id):
     product_stock = product['meta']['stock']['level']
     product_description = product['description']
     product_image_id = product['relationships']['main_image']['data']['id']
-    return product_name, product_price, product_stock, product_description, product_image_id
+    return product_name, product_price, product_stock, product_description,\
+        product_image_id
 
 
 def get_product_image_link(elastic_path_auth_token, file_id):
@@ -57,7 +56,8 @@ def get_product_image_link(elastic_path_auth_token, file_id):
     return response.json()['data']['link']['href']
 
 
-def add_product_to_cart(elastic_path_auth_token, cart_id, product_id, quantity):
+def add_product_to_cart(
+        elastic_path_auth_token, cart_id, product_id, quantity):
     base_url = 'https://api.moltin.com/'
     path = os.path.join('v2/carts/', cart_id, 'items/')
     url = os.path.join(base_url, path)
@@ -104,20 +104,27 @@ def delete_item_from_cart(elastic_path_auth_token, cart_id, product_id):
     return response.json()
 
 
-def main():
-    load_dotenv()
-    client_id = os.environ['ELASTIC_PATH_CLIENT_ID']
-    client_secret = os.environ['ELASTIC_PATH_CLIENT_SECRET']
-    elastic_path_auth_token = get_authorization_token()
-    # print(elastic_path_auth_token)
-    # pprint(get_products(elastic_path_auth_token))
-    # pprint(add_product_to_cart(
-    #     elastic_path_auth_token,
-    #     'test_cart_2',
-    #     '91d918d1-f992-4c28-9149-6c7daa965c9c'
-    # ))
-    pprint(get_cart_items(elastic_path_auth_token, 202220724))
+def create_a_customer(elastic_path_auth_token, email, name):
+    base_url = 'https://api.moltin.com/'
+    path = 'v2/customers/'
+    url = os.path.join(base_url, path)
+    headers = {'Authorization': f'Bearer {elastic_path_auth_token}'}
+    payload = {
+        'data': {
+            'type': 'customer',
+            'name': name,
+            'email': email,
+            }
+        }
+    response = requests.post(url, headers=headers, json=payload)
+    return response.json()
 
 
-if __name__ == '__main__':
-    main()
+def get_a_customer(elastic_path_auth_token, customer_id):
+    base_url = 'https://api.moltin.com/'
+    path = os.path.join('v2/customers/', customer_id)
+    url = os.path.join(base_url, path)
+    headers = {'Authorization': f'Bearer {elastic_path_auth_token}'}
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+    return response.json()['data']
