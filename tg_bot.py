@@ -46,11 +46,7 @@ def download_image(url, path, params=None):
 
 
 def get_image_extension(url):
-    parsed_url = urllib.parse.urlsplit(
-        url,
-        scheme='',
-        allow_fragments=True
-    )
+    parsed_url = urllib.parse.urlsplit(url, scheme='', allow_fragments=True)
     filepath = urllib.parse.unquote(
         parsed_url[2],
         encoding='utf-8',
@@ -60,8 +56,7 @@ def get_image_extension(url):
     return extension
 
 
-def send_cart_to_customer(bot, chat_id, message_id):
-    ep_authorization_token = ep_api.get_authorization_token()
+def send_cart_to_customer(bot, chat_id, message_id, ep_authorization_token):
     cart_items = ep_api.get_cart_items(ep_authorization_token, chat_id)
     cart_info = ep_api.get_customers_cart(ep_authorization_token, chat_id)
     cart_total_info = []
@@ -98,52 +93,64 @@ def send_cart_to_customer(bot, chat_id, message_id):
     )
 
 
+def send_product_to_customer(bot, chat_id, message_id, ep_authorization_token,
+                             product_id, image_folder_path):
+    product = ep_api.get_product_details(
+        ep_authorization_token, product_id)
+    product_name = product['name']
+    product_price = \
+        product['meta']['display_price']['with_tax']['formatted']
+    product_stock = product['meta']['stock']['level']
+    product_description = product['description']
+    product_image_id = product['relationships']['main_image']['data']['id']
+    product_image_link = ep_api.get_product_image_link(
+        ep_authorization_token, product_image_id)
+    image_file_extension = get_image_extension(product_image_link)
+    image_filepath = os.path.join(
+        image_folder_path, f'{product_name}{image_file_extension}')
+    download_image(product_image_link, image_filepath)
+    items_quantities = [1, 5, 10]
+    keyboard = []
+    for quantity in items_quantities:
+        keyboard.append([InlineKeyboardButton(
+            f'Buy {quantity}', callback_data=f'{product_id}, {quantity}')])
+    keyboard.append([InlineKeyboardButton(
+        'Back to menu', callback_data='main_menu_return')])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    bot.delete_message(chat_id=chat_id, message_id=message_id)
+    message = dedent(f'''
+                {product_name}\n
+                {product_price} per one piece\n
+                {product_stock} pieces available on stock\n
+                {product_description}''')
+    with open(image_filepath, 'rb') as image_file:
+        bot.send_photo(
+            chat_id,
+            image_file,
+            caption=message,
+            reply_markup=reply_markup,
+        )
+    os.remove(image_filepath)
+
+
 def handle_menu(bot, update, image_folder_path):
     query = update.callback_query
     chat_id = query['message']['chat']['id']
     message_id = query['message']['message_id']
+    ep_authorization_token = ep_api.get_authorization_token()
     if query.data == 'display_cart_details':
-        send_cart_to_customer(bot, chat_id, message_id)
+        send_cart_to_customer(bot, chat_id, message_id, ep_authorization_token)
         return 'HANDLE_CART'
     else:
-        ep_authorization_token = ep_api.get_authorization_token()
         product_id = query.data
-        product = ep_api.get_product_details(
-            ep_authorization_token, product_id)
-        product_name = product['name']
-        product_price = \
-            product['meta']['display_price']['with_tax']['formatted']
-        product_stock = product['meta']['stock']['level']
-        product_description = product['description']
-        product_image_id = product['relationships']['main_image']['data']['id']
-        product_image_link = ep_api.get_product_image_link(
-            ep_authorization_token, product_image_id)
-        image_file_extension = get_image_extension(product_image_link)
-        image_filepath = os.path.join(
-            image_folder_path, f'{product_name}{image_file_extension}')
-        download_image(product_image_link, image_filepath)
-        items_quantities = [1, 5, 10]
-        keyboard = []
-        for quantity in items_quantities:
-            keyboard.append([InlineKeyboardButton(
-                f'Buy {quantity}', callback_data=f'{product_id}, {quantity}')])
-        keyboard.append([InlineKeyboardButton(
-            'Back to menu', callback_data='main_menu_return')])
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        bot.delete_message(chat_id=chat_id, message_id=message_id)
-        message = dedent(f'''
-            {product_name}\n
-            {product_price} per one piece\n
-            {product_stock} pieces available on stock\n
-            {product_description}''')
-        with open(image_filepath, 'rb') as image_file:
-            bot.send_photo(
-                chat_id,
-                image_file,
-                caption=message,
-                reply_markup=reply_markup,
-            )
-        os.remove(image_filepath)
+        send_product_to_customer(
+            bot,
+            chat_id,
+            message_id,
+            ep_authorization_token,
+            product_id,
+            image_folder_path,
+        )
         return 'HANDLE_DESCRIPTION'
 
 
@@ -228,7 +235,7 @@ def handle_cart(bot, update):
             chat_id,
             query_data,
         )
-        send_cart_to_customer(bot, chat_id, message_id)
+        send_cart_to_customer(bot, chat_id, message_id, ep_authorization_token)
         return 'HANDLE_CART'
 
 
@@ -273,7 +280,7 @@ def get_database_connection():
     return _database
 
 
-def get_image_folder_path_arguments():
+def get_image_folder_path_argument():
     parser = argparse.ArgumentParser(
         description='Seafood shop in Telegram.')
     parser.add_argument(
@@ -285,7 +292,7 @@ def get_image_folder_path_arguments():
 
 def main():
     load_dotenv()
-    image_folder = get_image_folder_path_arguments()
+    image_folder = get_image_folder_path_argument()
     os.makedirs(image_folder, exist_ok=True)
     token = os.environ['TELEGRAM_BOT_TOKEN']
     updater = Updater(token)
