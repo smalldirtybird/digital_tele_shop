@@ -1,5 +1,4 @@
 import argparse
-import json
 import os
 import traceback
 import urllib
@@ -83,15 +82,21 @@ def handle_menu(bot, update, image_folder_path):
     if query.data == 'get_cart_details':
         cart_items = get_cart_items(ep_authorization_token, chat_id)
         cart_total_info = []
+        keyboard = []
         for item in cart_items:
+            product_name = item['name']
             product_details_text = dedent(f"""
-            {item['name']}
+            {product_name}
             {item['description']}
             {item['meta']['display_price']['with_tax']['unit']['formatted']}
             {item['quantity']} pieces in cart for {item['meta']
             ['display_price']['with_tax']['value']['formatted']}
             """)
             cart_total_info.append(product_details_text)
+            keyboard.append([InlineKeyboardButton(
+                f'Remove {product_name} from cart',
+                callback_data=item['id'],
+            )])
         cart_info = get_customers_cart(ep_authorization_token, chat_id)
         cart_total_amount = \
             cart_info['meta']['display_price']['with_tax']['formatted']
@@ -101,12 +106,16 @@ def handle_menu(bot, update, image_folder_path):
             chat_id=chat_id,
             message_id=message_id,
         )
+        keyboard.append([InlineKeyboardButton(
+            'Back to menu',
+            callback_data='menu_return',
+        )])
         bot.send_message(
             text='\n'.join(cart_total_info),
             chat_id=chat_id,
-            # reply_markup=get_main_menu_keyboard(chat_id),
+            reply_markup=InlineKeyboardMarkup(keyboard),
         )
-        return 'HANDLE_MENU'
+        return 'HANDLE_CART'
     else:
         product_id = query.data
         product_name, product_price, product_stock, product_description, \
@@ -132,7 +141,7 @@ def handle_menu(bot, update, image_folder_path):
                 callback_data=f'{product_id}, {quantity}',
             )])
         keyboard.append([InlineKeyboardButton(
-            'Back',
+            'Back to menu',
             callback_data='menu_return',
         )])
         reply_markup = InlineKeyboardMarkup(keyboard)
@@ -157,19 +166,24 @@ def handle_menu(bot, update, image_folder_path):
         return 'HANDLE_DESCRIPTION'
 
 
-def handle_description(bot, update):
-    query = update['callback_query']['data']
-    chat_id = str(update['callback_query']['message']['chat']['id'])
-    if query == 'menu_return':
+def handle_back_to_menu_button(bot, query_data, chat_id):
+    if query_data == 'menu_return':
         bot.send_message(
             text='Please choose:',
             chat_id=chat_id,
             reply_markup=get_main_menu_keyboard(chat_id),
         )
+
+
+def handle_description(bot, update):
+    query_data = update['callback_query']['data']
+    chat_id = str(update['callback_query']['message']['chat']['id'])
+    if query_data == 'menu_return':
+        handle_back_to_menu_button(bot, query_data, chat_id)
         return 'HANDLE_MENU'
     else:
         ep_authorization_token = get_authorization_token()
-        product_id, quantity = query.split(sep=', ')
+        product_id, quantity = query_data.split(sep=', ')
         add_product_to_cart(
                 ep_authorization_token,
                 chat_id,
@@ -177,6 +191,14 @@ def handle_description(bot, update):
                 int(quantity),
             )
     return 'HANDLE_DESCRIPTION'
+
+
+def handle_cart(bot, update):
+    query_data = update['callback_query']['data']
+    chat_id = str(update['callback_query']['message']['chat']['id'])
+    if query_data == 'menu_return':
+        handle_back_to_menu_button(bot, query_data, chat_id)
+        return 'HANDLE_MENU'
 
 
 def handle_users_reply(bot, update, image_folder_path):
@@ -201,6 +223,7 @@ def handle_users_reply(bot, update, image_folder_path):
             image_folder_path=image_folder_path,
         ),
         'HANDLE_DESCRIPTION': handle_description,
+        'HANDLE_CART': handle_cart,
     }
     state_handler = states_functions[user_state]
     # Если вы вдруг не заметите, что python-telegram-bot перехватывает ошибки.
