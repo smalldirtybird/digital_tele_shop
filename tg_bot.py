@@ -12,17 +12,14 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (CallbackQueryHandler, CommandHandler, Filters,
                           MessageHandler, Updater)
 
-from elastic_path_api import (add_product_to_cart, delete_item_from_cart,
-                              get_authorization_token, get_cart_items,
-                              get_customers_cart, get_product_details,
-                              get_product_image_link, get_products)
+import elastic_path_api as ep_api
 
 _database = None
 
 
 def get_main_menu_keyboard(chat_id):
-    ep_authorization_token = get_authorization_token()
-    products = get_products(ep_authorization_token)
+    ep_authorization_token = ep_api.get_authorization_token()
+    products = ep_api.get_products(ep_authorization_token)
     keyboard = []
     for number, product in enumerate(products):
         product_name = product['name']
@@ -76,9 +73,9 @@ def get_image_extension(url):
 
 
 def send_cart_details(bot, chat_id, message_id):
-    ep_authorization_token = get_authorization_token()
-    cart_items = get_cart_items(ep_authorization_token, chat_id)
-    cart_info = get_customers_cart(ep_authorization_token, chat_id)
+    ep_authorization_token = ep_api.get_authorization_token()
+    cart_items = ep_api.get_cart_items(ep_authorization_token, chat_id)
+    cart_info = ep_api.get_customers_cart(ep_authorization_token, chat_id)
     cart_total_info = []
     keyboard = []
     for item in cart_items:
@@ -115,7 +112,7 @@ def send_cart_details(bot, chat_id, message_id):
 
 def handle_menu(bot, update, image_folder_path):
     query = update.callback_query
-    ep_authorization_token = get_authorization_token()
+    ep_authorization_token = ep_api.get_authorization_token()
     chat_id = query['message']['chat']['id']
     message_id = query['message']['message_id']
     if query.data == 'display_cart_details':
@@ -124,11 +121,11 @@ def handle_menu(bot, update, image_folder_path):
     else:
         product_id = query.data
         product_name, product_price, product_stock, product_description, \
-            product_image_id = get_product_details(
+            product_image_id = ep_api.get_product_details(
                 ep_authorization_token,
                 product_id,
             )
-        product_image_link = get_product_image_link(
+        product_image_link = ep_api.get_product_image_link(
             ep_authorization_token,
             product_image_id,
         )
@@ -181,9 +178,9 @@ def handle_description(bot, update):
         )
         return 'HANDLE_MENU'
     else:
-        ep_authorization_token = get_authorization_token()
+        ep_authorization_token = ep_api.get_authorization_token()
         product_id, quantity = query_data.split(sep=', ')
-        add_product_to_cart(
+        ep_api.add_product_to_cart(
                 ep_authorization_token,
                 chat_id,
                 product_id,
@@ -208,8 +205,8 @@ def handle_cart(bot, update):
         )
         return 'HANDLE_MENU'
     else:
-        ep_authorization_token = get_authorization_token()
-        delete_item_from_cart(
+        ep_authorization_token = ep_api.get_authorization_token()
+        ep_api.delete_item_from_cart(
             ep_authorization_token,
             chat_id,
             query_data,
