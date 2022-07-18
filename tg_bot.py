@@ -12,10 +12,10 @@ from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (CallbackQueryHandler, CommandHandler, Filters,
                           MessageHandler, Updater)
 
-from elastic_path_api import (add_product_to_cart, get_authorization_token,
-                              get_cart_items, get_customers_cart,
-                              get_product_details, get_product_image_link,
-                              get_products)
+from elastic_path_api import (add_product_to_cart, delete_item_from_cart,
+                              get_authorization_token, get_cart_items,
+                              get_customers_cart, get_product_details,
+                              get_product_image_link, get_products)
 
 _database = None
 
@@ -32,7 +32,7 @@ def get_main_menu_keyboard(chat_id):
         keyboard.append(product_button)
     keyboard.append([InlineKeyboardButton(
         'View shopping cart',
-        callback_data='get_cart_details',
+        callback_data='display_cart_details',
     )])
     return InlineKeyboardMarkup(keyboard)
 
@@ -75,46 +75,51 @@ def get_image_extension(url):
     return extension
 
 
+def send_cart_details(bot, chat_id, message_id):
+    ep_authorization_token = get_authorization_token()
+    cart_items = get_cart_items(ep_authorization_token, chat_id)
+    cart_info = get_customers_cart(ep_authorization_token, chat_id)
+    cart_total_info = []
+    keyboard = []
+    for item in cart_items:
+        product_name = item['name']
+        product_details_text = dedent(f"""
+                {product_name}
+                {item['description']}
+                {item['meta']['display_price']['with_tax']['unit']['formatted']}
+                {item['quantity']} pieces in cart for {item['meta']
+        ['display_price']['with_tax']['value']['formatted']}
+                """)
+        cart_total_info.append(product_details_text)
+        keyboard.append([InlineKeyboardButton(
+            f'Remove {product_name} from cart',
+            callback_data=item['id'],
+        )])
+    cart_total_amount = \
+        cart_info['meta']['display_price']['with_tax']['formatted']
+    cart_total_info.append(f'Total: {cart_total_amount}')
+    bot.delete_message(
+        chat_id=chat_id,
+        message_id=message_id,
+    )
+    keyboard.append([InlineKeyboardButton(
+        'Back to menu',
+        callback_data='menu_return',
+    )])
+    bot.send_message(
+        text='\n'.join(cart_total_info),
+        chat_id=chat_id,
+        reply_markup=InlineKeyboardMarkup(keyboard),
+    )
+
+
 def handle_menu(bot, update, image_folder_path):
     query = update.callback_query
     ep_authorization_token = get_authorization_token()
     chat_id = query['message']['chat']['id']
-    if query.data == 'get_cart_details':
-        cart_items = get_cart_items(ep_authorization_token, chat_id)
-        cart_total_info = []
-        keyboard = []
-        for item in cart_items:
-            product_name = item['name']
-            product_details_text = dedent(f"""
-            {product_name}
-            {item['description']}
-            {item['meta']['display_price']['with_tax']['unit']['formatted']}
-            {item['quantity']} pieces in cart for {item['meta']
-            ['display_price']['with_tax']['value']['formatted']}
-            """)
-            cart_total_info.append(product_details_text)
-            keyboard.append([InlineKeyboardButton(
-                f'Remove {product_name} from cart',
-                callback_data=item['id'],
-            )])
-        cart_info = get_customers_cart(ep_authorization_token, chat_id)
-        cart_total_amount = \
-            cart_info['meta']['display_price']['with_tax']['formatted']
-        cart_total_info.append(f'Total: {cart_total_amount}')
-        message_id = query['message']['message_id']
-        bot.delete_message(
-            chat_id=chat_id,
-            message_id=message_id,
-        )
-        keyboard.append([InlineKeyboardButton(
-            'Back to menu',
-            callback_data='menu_return',
-        )])
-        bot.send_message(
-            text='\n'.join(cart_total_info),
-            chat_id=chat_id,
-            reply_markup=InlineKeyboardMarkup(keyboard),
-        )
+    message_id = query['message']['message_id']
+    if query.data == 'display_cart_details':
+        send_cart_details(bot, chat_id, message_id)
         return 'HANDLE_CART'
     else:
         product_id = query.data
@@ -145,7 +150,6 @@ def handle_menu(bot, update, image_folder_path):
             callback_data='menu_return',
         )])
         reply_markup = InlineKeyboardMarkup(keyboard)
-        message_id = query['message']['message_id']
         bot.delete_message(
             chat_id=chat_id,
             message_id=message_id,
@@ -166,20 +170,15 @@ def handle_menu(bot, update, image_folder_path):
         return 'HANDLE_DESCRIPTION'
 
 
-def handle_back_to_menu_button(bot, query_data, chat_id):
+def handle_description(bot, update):
+    query_data = update['callback_query']['data']
+    chat_id = str(update['callback_query']['message']['chat']['id'])
     if query_data == 'menu_return':
         bot.send_message(
             text='Please choose:',
             chat_id=chat_id,
             reply_markup=get_main_menu_keyboard(chat_id),
         )
-
-
-def handle_description(bot, update):
-    query_data = update['callback_query']['data']
-    chat_id = str(update['callback_query']['message']['chat']['id'])
-    if query_data == 'menu_return':
-        handle_back_to_menu_button(bot, query_data, chat_id)
         return 'HANDLE_MENU'
     else:
         ep_authorization_token = get_authorization_token()
@@ -196,9 +195,27 @@ def handle_description(bot, update):
 def handle_cart(bot, update):
     query_data = update['callback_query']['data']
     chat_id = str(update['callback_query']['message']['chat']['id'])
+    message_id = update['callback_query']['message']['message_id']
     if query_data == 'menu_return':
-        handle_back_to_menu_button(bot, query_data, chat_id)
+        bot.delete_message(
+            chat_id=chat_id,
+            message_id=message_id,
+        )
+        bot.send_message(
+            text='Please choose:',
+            chat_id=chat_id,
+            reply_markup=get_main_menu_keyboard(chat_id),
+        )
         return 'HANDLE_MENU'
+    else:
+        ep_authorization_token = get_authorization_token()
+        delete_item_from_cart(
+            ep_authorization_token,
+            chat_id,
+            query_data,
+        )
+        send_cart_details(bot, chat_id, message_id)
+        return 'HANDLE_CART'
 
 
 def handle_users_reply(bot, update, image_folder_path):

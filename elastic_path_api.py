@@ -94,6 +94,16 @@ def get_customers_cart(elastic_path_auth_token, cart_id):
     return response.json()['data']
 
 
+def delete_item_from_cart(elastic_path_auth_token, cart_id, product_id):
+    base_url = 'https://api.moltin.com/'
+    path = os.path.join('v2/carts/', cart_id, 'items/', product_id)
+    url = os.path.join(base_url, path)
+    headers = {'Authorization': f'Bearer {elastic_path_auth_token}'}
+    response = requests.delete(url, headers=headers)
+    response.raise_for_status()
+    return response.json()
+
+
 def main():
     load_dotenv()
     client_id = os.environ['ELASTIC_PATH_CLIENT_ID']
