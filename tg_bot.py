@@ -109,9 +109,14 @@ def handle_menu(bot, update, image_folder_path):
     else:
         ep_authorization_token = ep_api.get_authorization_token()
         product_id = query.data
-        product_name, product_price, product_stock, product_description, \
-            product_image_id = ep_api.get_product_details(
-                ep_authorization_token, product_id)
+        product = ep_api.get_product_details(
+            ep_authorization_token, product_id)
+        product_name = product['name']
+        product_price = \
+            product['meta']['display_price']['with_tax']['formatted']
+        product_stock = product['meta']['stock']['level']
+        product_description = product['description']
+        product_image_id = product['relationships']['main_image']['data']['id']
         product_image_link = ep_api.get_product_image_link(
             ep_authorization_token, product_image_id)
         image_file_extension = get_image_extension(product_image_link)
@@ -287,9 +292,7 @@ def main():
     updater = Updater(token)
     dispatcher = updater.dispatcher
     handling_users_reply = partial(
-        handle_users_reply,
-        image_folder_path=image_folder,
-    )
+        handle_users_reply, image_folder_path=image_folder)
     dispatcher.add_handler(CallbackQueryHandler(handling_users_reply))
     dispatcher.add_handler(MessageHandler(Filters.text, handling_users_reply))
     dispatcher.add_handler(CommandHandler('start', handling_users_reply))

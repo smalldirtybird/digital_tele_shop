@@ -36,14 +36,7 @@ def get_product_details(elastic_path_auth_token, product_id):
     headers = {'Authorization': f'Bearer {elastic_path_auth_token}'}
     response = requests.get(url, headers=headers)
     response.raise_for_status()
-    product = response.json()['data']
-    product_name = product['name']
-    product_price = product['meta']['display_price']['with_tax']['formatted']
-    product_stock = product['meta']['stock']['level']
-    product_description = product['description']
-    product_image_id = product['relationships']['main_image']['data']['id']
-    return product_name, product_price, product_stock, product_description,\
-        product_image_id
+    return response.json()['data']
 
 
 def get_product_image_link(elastic_path_auth_token, file_id):
