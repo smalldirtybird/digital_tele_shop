@@ -16,7 +16,7 @@ import elastic_path_api as ep_api
 _database = None
 
 
-def get_main_menu_keyboard(chat_id):
+def get_main_menu_keyboard():
     ep_authorization_token = ep_api.get_authorization_token()
     products = ep_api.get_products(ep_authorization_token)
     keyboard = []
@@ -31,10 +31,9 @@ def get_main_menu_keyboard(chat_id):
 
 
 def start(bot, update):
-    chat_id = update['message']['chat']['id']
     update.message.reply_text(
         'Please choose:',
-        reply_markup=get_main_menu_keyboard(chat_id),
+        reply_markup=get_main_menu_keyboard(),
     )
     return 'HANDLE_MENU'
 
@@ -155,7 +154,7 @@ def handle_description(bot, update):
         bot.send_message(
             text='Please choose:',
             chat_id=chat_id,
-            reply_markup=get_main_menu_keyboard(chat_id),
+            reply_markup=get_main_menu_keyboard(),
         )
         return 'HANDLE_MENU'
     else:
@@ -219,7 +218,7 @@ def handle_cart(bot, update):
         bot.send_message(
             text='Please choose:',
             chat_id=chat_id,
-            reply_markup=get_main_menu_keyboard(chat_id),
+            reply_markup=get_main_menu_keyboard(),
         )
         return 'HANDLE_MENU'
     else:
