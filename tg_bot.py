@@ -1,6 +1,7 @@
 import argparse
 import os
 import urllib
+from datetime import datetime
 from functools import partial
 from textwrap import dedent
 
@@ -13,7 +14,9 @@ from telegram.ext import (CallbackQueryHandler, CommandHandler, Filters,
 
 import elastic_path_api as ep_api
 
-_database = None
+database = None
+token_expires = 0
+ep_auth_token = None
 
 
 def get_main_menu_keyboard(ep_authorization_token):
@@ -235,8 +238,10 @@ def handle_cart(bot, update, ep_authorization_token):
 
 
 def handle_users_reply(bot, update, image_folder_path):
-    ep_auth_token, token_expires = ep_api.get_authorization_token()
-    print(ep_auth_token, token_expires)
+    global ep_auth_token, token_expires
+    current_timestamp = datetime.timestamp(datetime.now())
+    if current_timestamp >= token_expires:
+        ep_auth_token, token_expires = ep_api.get_authorization_token()
     db = get_database_connection()
     if update.message:
         user_reply = update.message.text
@@ -270,17 +275,17 @@ def handle_users_reply(bot, update, image_folder_path):
 
 
 def get_database_connection():
-    global _database
-    if _database is None:
+    global database
+    if database is None:
         database_password = os.environ['DB_PASSWORD']
         database_host = os.environ['DB_HOST']
         database_port = os.environ['DB_PORT']
-        _database = redis.Redis(
+        database = redis.Redis(
             host=database_host,
             port=database_port,
             password=database_password,
         )
-    return _database
+    return database
 
 
 def get_image_folder_path_argument():

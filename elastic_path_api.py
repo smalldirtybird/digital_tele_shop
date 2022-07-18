@@ -1,11 +1,9 @@
 import os
-from datetime import datetime
 
 import requests
 
 
 def get_authorization_token():
-    print('now:', datetime.timestamp(datetime.now()))
     base_url = 'https://api.moltin.com/'
     path = 'oauth/access_token/'
     url = os.path.join(base_url, path)
