@@ -72,12 +72,15 @@ def get_image_extension(url):
     return extension
 
 
-def send_cart_details(bot, chat_id, message_id):
+def send_cart_to_customer(bot, chat_id, message_id):
     ep_authorization_token = ep_api.get_authorization_token()
     cart_items = ep_api.get_cart_items(ep_authorization_token, chat_id)
     cart_info = ep_api.get_customers_cart(ep_authorization_token, chat_id)
     cart_total_info = []
-    keyboard = []
+    keyboard = [[InlineKeyboardButton(
+        'Make a purchase',
+        callback_data='request_email',
+    )]]
     for item in cart_items:
         product_name = item['name']
         product_details_text = dedent(f"""
@@ -116,7 +119,7 @@ def handle_menu(bot, update, image_folder_path):
     chat_id = query['message']['chat']['id']
     message_id = query['message']['message_id']
     if query.data == 'display_cart_details':
-        send_cart_details(bot, chat_id, message_id)
+        send_cart_to_customer(bot, chat_id, message_id)
         return 'HANDLE_CART'
     else:
         product_id = query.data
@@ -189,10 +192,32 @@ def handle_description(bot, update):
     return 'HANDLE_DESCRIPTION'
 
 
+def waiting_email(bot, update):
+    user_reply = update['message']
+    bot.send_message(
+        text=dedent(f'''
+            Email you sent:
+            {user_reply['text']}
+            '''),
+        chat_id=user_reply['chat']['id']
+    )
+    return 'WAITING_EMAIL'
+
+
 def handle_cart(bot, update):
     query_data = update['callback_query']['data']
     chat_id = str(update['callback_query']['message']['chat']['id'])
     message_id = update['callback_query']['message']['message_id']
+    if query_data == 'request_email':
+        bot.send_message(
+            text=dedent('''
+            Please send your email
+            so that our specialists will contact you
+            to complete the purchase
+            '''),
+            chat_id=chat_id,
+        )
+        return 'WAITING_EMAIL'
     if query_data == 'menu_return':
         bot.delete_message(
             chat_id=chat_id,
@@ -211,7 +236,7 @@ def handle_cart(bot, update):
             chat_id,
             query_data,
         )
-        send_cart_details(bot, chat_id, message_id)
+        send_cart_to_customer(bot, chat_id, message_id)
         return 'HANDLE_CART'
 
 
@@ -238,6 +263,7 @@ def handle_users_reply(bot, update, image_folder_path):
         ),
         'HANDLE_DESCRIPTION': handle_description,
         'HANDLE_CART': handle_cart,
+        'WAITING_EMAIL': waiting_email,
     }
     state_handler = states_functions[user_state]
     # Если вы вдруг не заметите, что python-telegram-bot перехватывает ошибки.
