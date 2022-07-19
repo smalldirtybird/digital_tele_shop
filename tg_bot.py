@@ -179,10 +179,11 @@ def handle_description(bot, update, ep_authorization_token):
 def handle_waiting_email(bot, update, ep_authorization_token):
     user_reply = update['message']['text']
     chat_id = update['message']['chat']['id']
+    username = update['message']['chat']['username']
     customer_account = ep_api.create_a_customer(
         ep_authorization_token,
         user_reply,
-        chat_id,
+        username,
     )
     if 'errors' in customer_account:
         bot.send_message(
