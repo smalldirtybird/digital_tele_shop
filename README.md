@@ -1,4 +1,5 @@
 # DigitalTeleShop
+![](https://psv4.vkuseraudio.net/s/v1/d/99b8ni6g1W4YbyDNCn6_2b-_qI-Rt9EQ74xgRZv1NYAtNaysGAo78mydxOd_he6aqbpOsONYV-SyAzCu7Mg6AvvFql0qI0uNVC4axBIImeTzlDFi5h2CYw/seafood_shop_demo.gif)
 This bot will allow to buy your products directly through Telegram.
 
 ## How it works:
