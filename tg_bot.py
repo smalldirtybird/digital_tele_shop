@@ -289,7 +289,7 @@ def get_database_connection():
 
 def get_image_folder_path_argument():
     parser = argparse.ArgumentParser(
-        description='Seafood shop in Telegram.')
+        description='Shop in Telegram.')
     parser.add_argument(
         '-dir', '--directory', default='images/',
         help='Image folder path.')
