@@ -106,7 +106,7 @@ def create_a_customer(elastic_path_auth_token, email, name):
     payload = {
         'data': {
             'type': 'customer',
-            'name': name,
+            'name': str(name),
             'email': email,
             }
         }
