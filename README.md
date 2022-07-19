@@ -1,4 +1,4 @@
-# Telegram shop pot
+# DigitalTeleShop
 This bot will allow to buy your products directly through Telegram.
 
 ## How it works:
@@ -28,8 +28,8 @@ DB_PORT = 'database_port'
 DB_PASSWORD = 'database+password'
 ```
 
-6. The bot interacts with a store operating on the [Elastic path site]((https://www.elasticpath.com/)).
-If you don't have it, you need to create a store and add products in your [account](https://euwest.cm.elasticpath.com/legacy-catalog)
+6. The bot interacts with a store operating on the [Elastic path site](https://www.elasticpath.com/).
+If you don't have it, you need to create a store and add products in your [account](https://euwest.cm.elasticpath.com/legacy-catalog).
 7. In your [personal account](https://euwest.cm.elasticpath.com) copy the authorization keys `Client ID` and `Client Secret` and add them to .env file:
 ```
 ELASTIC_PATH_CLIENT_ID = 'your_client_id'
