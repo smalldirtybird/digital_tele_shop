@@ -236,11 +236,15 @@ def handle_cart(bot, update, ep_authorization_token):
         return 'HANDLE_CART'
 
 
-def handle_users_reply(bot, update, image_folder_path):
+def handle_users_reply(
+        bot, update, image_folder_path, client_id, client_secret):
     global ep_auth_token, token_expires
     current_timestamp = datetime.timestamp(datetime.now())
     if current_timestamp >= token_expires:
-        ep_auth_token, token_expires = ep_api.get_authorization_token()
+        ep_auth_token, token_expires = ep_api.get_authorization_token(
+            client_id,
+            client_secret,
+        )
     db = get_database_connection()
     if update.message:
         user_reply = update.message.text
@@ -305,7 +309,11 @@ def main():
     updater = Updater(token)
     dispatcher = updater.dispatcher
     handling_users_reply = partial(
-        handle_users_reply, image_folder_path=image_folder)
+        handle_users_reply,
+        image_folder_path=image_folder,
+        client_id=os.environ['ELASTIC_PATH_CLIENT_ID'],
+        client_secret=os.environ['ELASTIC_PATH_CLIENT_SECRET'],
+    )
     dispatcher.add_handler(CallbackQueryHandler(handling_users_reply))
     dispatcher.add_handler(MessageHandler(Filters.text, handling_users_reply))
     dispatcher.add_handler(CommandHandler('start', handling_users_reply))

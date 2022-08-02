@@ -3,12 +3,10 @@ import os
 import requests
 
 
-def get_authorization_token():
+def get_authorization_token(client_id, client_secret):
     base_url = 'https://api.moltin.com/'
     path = 'oauth/access_token/'
     url = os.path.join(base_url, path)
-    client_id = os.environ['ELASTIC_PATH_CLIENT_ID']
-    client_secret = os.environ['ELASTIC_PATH_CLIENT_SECRET']
     payload = {
         'client_id': client_id,
         'client_secret': client_secret,
