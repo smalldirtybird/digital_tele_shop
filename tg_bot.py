@@ -85,7 +85,6 @@ def send_cart_to_customer(bot, chat_id, message_id, ep_authorization_token):
     cart_total_amount = \
         cart_info['meta']['display_price']['with_tax']['formatted']
     cart_total_info.append(f'Total: {cart_total_amount}')
-    bot.delete_message(chat_id=chat_id, message_id=message_id)
     keyboard.append([InlineKeyboardButton(
         'Back to menu', callback_data='main_menu_return')])
     bot.send_message(
@@ -93,6 +92,7 @@ def send_cart_to_customer(bot, chat_id, message_id, ep_authorization_token):
         chat_id=chat_id,
         reply_markup=InlineKeyboardMarkup(keyboard),
     )
+    bot.delete_message(chat_id=chat_id, message_id=message_id)
 
 
 def send_product_to_customer(bot, chat_id, message_id, ep_authorization_token,
@@ -119,7 +119,6 @@ def send_product_to_customer(bot, chat_id, message_id, ep_authorization_token,
     keyboard.append([InlineKeyboardButton(
         'Back to menu', callback_data='main_menu_return')])
     reply_markup = InlineKeyboardMarkup(keyboard)
-    bot.delete_message(chat_id=chat_id, message_id=message_id)
     message = dedent(f'''
                 {product_name}\n
                 {product_price} per one piece\n
@@ -133,6 +132,7 @@ def send_product_to_customer(bot, chat_id, message_id, ep_authorization_token,
             reply_markup=reply_markup,
         )
     os.remove(image_filepath)
+    bot.delete_message(chat_id=chat_id, message_id=message_id)
 
 
 def handle_menu(bot, update, image_folder_path, ep_authorization_token):
@@ -219,12 +219,12 @@ def handle_cart(bot, update, ep_authorization_token):
         )
         return 'WAITING_EMAIL'
     elif query_data == 'main_menu_return':
-        bot.delete_message(chat_id=chat_id, message_id=message_id)
         bot.send_message(
             text='Please choose:',
             chat_id=chat_id,
             reply_markup=get_main_menu_keyboard(ep_authorization_token),
         )
+        bot.delete_message(chat_id=chat_id, message_id=message_id)
         return 'HANDLE_MENU'
     else:
         ep_api.delete_item_from_cart(
@@ -285,9 +285,6 @@ def handle_users_reply(
 def get_database_connection(database_password, database_host, database_port):
     global database
     if database is None:
-        # database_password = os.environ['DB_PASSWORD']
-        # database_host = os.environ['DB_HOST']
-        # database_port = os.environ['DB_PORT']
         database = redis.Redis(
             host=database_host,
             port=database_port,
