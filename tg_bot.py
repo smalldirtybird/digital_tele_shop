@@ -218,7 +218,7 @@ def handle_cart(bot, update, ep_authorization_token):
             chat_id=chat_id,
         )
         return 'WAITING_EMAIL'
-    if query_data == 'main_menu_return':
+    elif query_data == 'main_menu_return':
         bot.delete_message(chat_id=chat_id, message_id=message_id)
         bot.send_message(
             text='Please choose:',
