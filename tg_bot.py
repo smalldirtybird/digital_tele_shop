@@ -237,7 +237,8 @@ def handle_cart(bot, update, ep_authorization_token):
 
 
 def handle_users_reply(
-        bot, update, image_folder_path, client_id, client_secret):
+        bot, update, image_folder_path, client_id, client_secret,
+        database_password, database_host, database_port):
     global ep_auth_token, token_expires
     current_timestamp = datetime.timestamp(datetime.now())
     if current_timestamp >= token_expires:
@@ -245,7 +246,11 @@ def handle_users_reply(
             client_id,
             client_secret,
         )
-    db = get_database_connection()
+    db = get_database_connection(
+        database_password,
+        database_host,
+        database_port,
+    )
     if update.message:
         user_reply = update.message.text
         chat_id = update.message.chat_id
@@ -277,12 +282,12 @@ def handle_users_reply(
     db.set(chat_id, next_state)
 
 
-def get_database_connection():
+def get_database_connection(database_password, database_host, database_port):
     global database
     if database is None:
-        database_password = os.environ['DB_PASSWORD']
-        database_host = os.environ['DB_HOST']
-        database_port = os.environ['DB_PORT']
+        # database_password = os.environ['DB_PASSWORD']
+        # database_host = os.environ['DB_HOST']
+        # database_port = os.environ['DB_PORT']
         database = redis.Redis(
             host=database_host,
             port=database_port,
@@ -313,6 +318,9 @@ def main():
         image_folder_path=image_folder,
         client_id=os.environ['ELASTIC_PATH_CLIENT_ID'],
         client_secret=os.environ['ELASTIC_PATH_CLIENT_SECRET'],
+        database_password=os.environ['DB_PASSWORD'],
+        database_host=os.environ['DB_HOST'],
+        database_port=os.environ['DB_PORT'],
     )
     dispatcher.add_handler(CallbackQueryHandler(handling_users_reply))
     dispatcher.add_handler(MessageHandler(Filters.text, handling_users_reply))
