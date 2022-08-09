@@ -22,6 +22,7 @@ TELEGRAM_BOT_TOKEN ='your_telegram_bot_token'
 Put your token instead of value in quotes.
 
 4. Create database on [Redislabs](https://redis.com/). 
+
 5. Add the following lines to .env file:
 ```
 DB_HOST = 'your_database_address'
@@ -29,7 +30,7 @@ DB_PORT = 'database_port'
 DB_PASSWORD = 'database+password'
 ```
 
-6. The bot interacts with a store operating on the [Elastic path site](https://www.elasticpath.com/).
+7. The bot interacts with a store operating on the [Elastic path site](https://www.elasticpath.com/).
 If you don't have it, you need to create a store and add products in your [account](https://euwest.cm.elasticpath.com/legacy-catalog).
 7. In your [personal account](https://euwest.cm.elasticpath.com) copy the authorization keys `Client ID` and `Client Secret` and add them to .env file:
 ```
