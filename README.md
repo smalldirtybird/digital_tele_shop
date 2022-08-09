@@ -22,6 +22,7 @@ TELEGRAM_BOT_TOKEN ='your_telegram_bot_token'
 Put your token instead of value in quotes.
 
 4. Create database on [Redislabs](https://redis.com/). 
+
 5. Add the following lines to .env file:
 ```
 DB_HOST = 'your_database_address'
